@@ -1,7 +1,9 @@
 #pragma once
 
+#include <intrin.h>
+
 #ifdef _DEBUG
-  #define DBG_HALT __asm{int 3}
+  #define DBG_HALT __debugbreak()
   #define DBG_EXEC (exp) exp
   #define DBG_ASSERT(exp) { if(!(exp)){ DBG_HALT; } }
   #define DBG_VALID_FLOAT(f) { DBG_ASSERT(f == f); }

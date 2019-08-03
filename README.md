@@ -8,4 +8,4 @@ The "eg_remi_shape_matching.pdf" file is the paper submission of this project. I
 
 The project dependencies are:
 - GLFW3 (https://www.glfw.org)
-- glbinding-1.1 (https://github.com/cginternals/glbinding)
+- glbinding-3.1 (https://github.com/cginternals/glbinding)

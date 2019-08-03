@@ -41,9 +41,9 @@ void glfwErrorCallback(int error, const char* description)
 
 void glBindingInit()
 {
-  glbinding::Binding::initialize();
-  glbinding::setCallbackMaskExcept(glbinding::CallbackMask::After, { "glGetError" });
-  glbinding::setAfterCallback(afterOpenglCallback);
+  glbinding::Binding::initialize(glfwGetProcAddress);
+  glbinding::Binding::setCallbackMaskExcept(glbinding::CallbackMask::After, { "glGetError" });
+  glbinding::Binding::setAfterCallback(afterOpenglCallback);
 #ifdef ENABLE_OPENGL_LOGS
   glbinding::setCallbackMask(glbinding::CallbackMask::Before | glbinding::CallbackMask::ParametersAndReturnValue);
   glbinding::setBeforeCallback(beforOpenglCallback);
@@ -61,7 +61,7 @@ void afterOpenglCallback(const glbinding::FunctionCall & call) {
 #ifndef ENABLE_OPENGL_LOGS
     std::cout << call.function->name() << std::endl;
 #endif
-    std::cout << "<> error: " << std::hex << error << std::endl;
+    std::cout << "<> error: " << std::hex << (int)error << std::endl;
     DBG_HALT;
   }
 }

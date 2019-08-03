@@ -18,7 +18,7 @@ float update_time_correction = 0.f;
 
 Grid groundGrid;
 
-#define CLOTH_RESOLUTION 6
+#define CLOTH_RESOLUTION 3
 #define CLOTH_EDGE_SIZE .1f
 #define CLOTH_THICKNESS .05f
 
