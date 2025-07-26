@@ -1,63 +1,55 @@
-###############################################################################
-# Set default behavior to automatically normalize line endings.
-###############################################################################
-* text=auto
+# Enforce Unix-style (LF) line endings for source code files, headers, and scripts
+*.cpp text eol=lf
+*.h text eol=lf
+*.hpp text eol=lf
+*.c text eol=lf
+*.cc text eol=lf
+*.txt text eol=lf
+*.sh text eol=lf
+*.md text eol=lf
+*.py text eol=lf
 
-###############################################################################
-# Set default behavior for command prompt diff.
-#
-# This is need for earlier builds of msysgit that does not have it on by
-# default for csharp files.
-# Note: This is only used by command line
-###############################################################################
-#*.cs     diff=csharp
+# Use CRLF line endings for Windows-specific files
+*.bat text eol=crlf
 
-###############################################################################
-# Set the merge driver for project and solution files
-#
-# Merging from the command prompt will add diff markers to the files if there
-# are conflicts (Merging from VS is not affected by the settings below, in VS
-# the diff markers are never inserted). Diff markers may cause the following 
-# file extensions to fail to load in VS. An alternative would be to treat
-# these files as binary and thus will always conflict and require user
-# intervention with every merge. To do so, just uncomment the entries below
-###############################################################################
-#*.sln       merge=binary
-#*.csproj    merge=binary
-#*.vbproj    merge=binary
-#*.vcxproj   merge=binary
-#*.vcproj    merge=binary
-#*.dbproj    merge=binary
-#*.fsproj    merge=binary
-#*.lsproj    merge=binary
-#*.wixproj   merge=binary
-#*.modelproj merge=binary
-#*.sqlproj   merge=binary
-#*.wwaproj   merge=binary
+# Treat shader files as text and enforce LF
+*.vert text eol=lf
+*.frag text eol=lf
 
-###############################################################################
-# behavior for image files
-#
-# image files are treated as binary by default.
-###############################################################################
-#*.jpg   binary
-#*.png   binary
-#*.gif   binary
+# Mark binary files (no diffing or merging)
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.bmp binary
+*.ico binary
+*.pdf binary
+*.zip binary
+*.tar binary
+*.gz binary
+*.7z binary
+*.dll binary
+*.so binary
+*.dylib binary
+*.exe binary
 
-###############################################################################
-# diff behavior for common document formats
-# 
-# Convert binary document formats to text before diffing them. This feature
-# is only available from the command line. Turn it on by uncommenting the 
-# entries below.
-###############################################################################
-#*.doc   diff=astextplain
-#*.DOC   diff=astextplain
-#*.docx  diff=astextplain
-#*.DOCX  diff=astextplain
-#*.dot   diff=astextplain
-#*.DOT   diff=astextplain
-#*.pdf   diff=astextplain
-#*.PDF   diff=astextplain
-#*.rtf   diff=astextplain
-#*.RTF   diff=astextplain
+# Ignore merge conflicts for some auto-generated files (keep the current version on merge)
+*.lock merge=ours
+*.out merge=ours
+meson-logs/** merge=ours
+
+# Mark special configurations or generated files as binary, treated as-is
+meson.build text eol=lf
+.gitattributes export-ignore
+.gitignore export-ignore
+
+# Linguist Overrides (helps improve language stats on GitHub)
+*.h linguist-language=C++
+*.cpp linguist-language=C++
+
+# Export-ignore for generated files (exclude from releases/archives created with git-archive)
+meson-logs/ export-ignore
+*.log export-ignore
+build*/ export-ignore
+*.ninja export-ignore
+meson-private/ export-ignore
