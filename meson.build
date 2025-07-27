@@ -10,10 +10,17 @@ inc_dir = include_directories(
 
 # Source files
 sources = [
-    'sources/Camera.cpp',
     'sources/main.cpp',
-    'sources/math.cpp',
-    'sources/motion_system.cpp',
+    'sources/maths/vector.cpp',
+    'sources/maths/matrix.cpp',
+    'sources/maths/quaternion.cpp',
+    'sources/physics/angular_system.cpp',
+    'sources/physics/linear_system.cpp',
+    'sources/3D/camera.cpp',
+    'sources/3D/camera_controls.cpp',
+    'sources/3D/grid.cpp',
+    'sources/BVH.cpp',
+    'sources/cloth.cpp',
     'sources/openGL.cpp'
 ]
 
@@ -22,10 +29,10 @@ glfw = dependency('glfw3', required: true, static: true)
 glbinding = dependency('glbinding', required: true, static: true)
 
 # Target executable
-executable('cxxclothsimulation',
+executable('cxx-clothes',
            sources,
            include_directories: inc_dir,
            dependencies: [glfw, glbinding],
-           cpp_args: ['-Wall', '-Wextra', '-Werror'],
+#           cpp_args: ['-Wall', '-Wextra', '-Werror'],
            install: true
 )

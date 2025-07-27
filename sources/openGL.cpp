@@ -2,136 +2,171 @@
 #include "macro.h"
 #include <iostream>
 #include <fstream>
+#include <cstring>
 
-void glfwInitAndCreateWindow(GLFWwindow * & window, int width, int height, std::string title)
+void glfwInitAndCreateWindow(GLFWwindow* & window, int width, int height, std::string title)
 {
-  // Try to initialise GLFW
-  if (!glfwInit())
-    exit(EXIT_FAILURE);
-  else
-  {
-    glfwSetErrorCallback(glfwErrorCallback);
-
-    glfwWindowHint(GLFW_SAMPLES, 4); // 4x antialiasing
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3); // We want OpenGL 3.3
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
-    glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, true); // To make MacOS happy; should not be needed
-    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE); //We don't want the old OpenGL 
-
-                                                                   // Try to initialise the window
-    if (!(window = glfwCreateWindow(width, height, title.c_str(), NULL, NULL)))
-    {
-      glfwTerminate();
-      exit(EXIT_FAILURE);
-    }
+    // Try to initialise GLFW
+    if (!glfwInit())
+        exit(EXIT_FAILURE);
     else
     {
-      // Make the window context the current OpenGL context
-      glfwMakeContextCurrent(window);
-      // Set the key callback
-      //glfwSetKeyCallback(window, glfwKeyCallback);
+        glfwSetErrorCallback(glfwErrorCallback);
+
+        glfwWindowHint(GLFW_SAMPLES, 4); // 4x antialiasing
+        glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3); // We want OpenGL 3.3
+        glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+        glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, true); // To make MacOS happy; should not be needed
+        glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE); //We don't want the old OpenGL
+
+        // Try to initialise the window
+        if (!(window = glfwCreateWindow(width, height, title.c_str(), NULL, NULL)))
+        {
+            glfwTerminate();
+            exit(EXIT_FAILURE);
+        }
+        else
+        {
+            // Make the window context the current OpenGL context
+            glfwMakeContextCurrent(window);
+            // Set the key callback
+            //glfwSetKeyCallback(window, glfwKeyCallback);
+        }
     }
-  }
 }
+
 void glfwErrorCallback(int error, const char* description)
 {
-  fprintf(stderr, "GLFW Error: (%d) %s\n", error, description);
-  DBG_HALT;
+    fprintf(stderr, "GLFW Error: (%d) %s\n", error, description);
+    DBG_HALT;
 }
 
 void glBindingInit()
 {
-  glbinding::Binding::initialize(glfwGetProcAddress);
-  glbinding::Binding::setCallbackMaskExcept(glbinding::CallbackMask::After, { "glGetError" });
-  glbinding::Binding::setAfterCallback(afterOpenglCallback);
-#ifdef ENABLE_OPENGL_LOGS
-  glbinding::setCallbackMask(glbinding::CallbackMask::Before | glbinding::CallbackMask::ParametersAndReturnValue);
-  glbinding::setBeforeCallback(beforOpenglCallback);
-#endif
+    // Initialize glbinding with the OpenGL function loader (same as before)
+    glbinding::Binding::initialize(glfwGetProcAddress);
 
-  gl::glEnable(gl::GL_PROGRAM_POINT_SIZE);
-}
-void beforOpenglCallback(const glbinding::FunctionCall & call) {
-  std::cout << call.function->name() << std::endl;
-}
-void afterOpenglCallback(const glbinding::FunctionCall & call) {
-  gl::GLenum error = gl::glGetError();
-  if (error != gl::GL_NO_ERROR)
-  {
-#ifndef ENABLE_OPENGL_LOGS
-    std::cout << call.function->name() << std::endl;
-#endif
-    std::cout << "<> error: " << std::hex << (int)error << std::endl;
-    DBG_HALT;
-  }
-}
+    // Set the global callback mask for the functions
+    glbinding::setCallbackMask(glbinding::CallbackMask::After);
 
-gl::GLuint compile_shader(const char * shaderSource, gl::GLenum shaderType, bool inFile)
-{
-  const char * shaderSourceCode(nullptr);
-  std::string text;
-
-  if (!inFile)
-  {
-    shaderSourceCode = shaderSource;
-  }
-  else
-  {
-    std::ifstream ifs;
-    ifs.open(shaderSource, std::ifstream::in);
-    if (!ifs.is_open())
+    // Define what the "after" callbacks do
+    glbinding::setAfterCallback([](const glbinding::FunctionCall& call)
     {
-      // TODO: LOG
-	  std::cerr << "could not open shader file (" << shaderSource << ")" << std::endl;
-      DBG_HALT;
+        static thread_local bool inCallback = false;
+        if (!inCallback && strcmp(call.function->name(), "glGetError") != 0)
+        {
+            inCallback = true;
+            gl::GLenum error = gl::glGetError();
+            inCallback = false;
+            if (error != gl::GL_NO_ERROR)
+            {
+                std::cerr << "Function: " << call.function->name()
+                    << " caused error: " << std::hex << error
+                    << std::endl;
+
+                DBG_HALT;
+            }
+        }
+    });
+
+#ifdef ENABLE_OPENGL_LOGS
+    // Optional: Set a before-callback for logging or debugging parameters
+    glbinding::setCallbackMask(glbinding::CallbackMask::Before | glbinding::CallbackMask::ParametersAndReturnValue);
+    glbinding::setBeforeCallback([](const glbinding::FunctionCall &call) {
+        std::cout << "Calling: " << call.function->name() << std::endl;
+    });
+#endif
+
+    // Basic OpenGL state setup
+    gl::glEnable(gl::GL_PROGRAM_POINT_SIZE);
+}
+
+void beforeOpenglCallback(const glbinding::FunctionCall& call)
+{
+    std::cout << call.function->name() << std::endl;
+}
+
+void afterOpenglCallback(const glbinding::FunctionCall& call)
+{
+    gl::GLenum error = gl::glGetError();
+    if (error != gl::GL_NO_ERROR)
+    {
+#ifndef ENABLE_OPENGL_LOGS
+        std::cout << call.function->name() << std::endl;
+#endif
+        std::cout << "<> error: " << std::hex << (int)error << std::endl;
+        DBG_HALT;
+    }
+}
+
+gl::GLuint compile_shader(const char* shaderSource, gl::GLenum shaderType, bool inFile)
+{
+    const char* shaderSourceCode(nullptr);
+    std::string text;
+
+    if (!inFile)
+    {
+        shaderSourceCode = shaderSource;
     }
     else
     {
-      std::getline(ifs, text, (char)EOF);
-      ifs.close();
+        std::ifstream ifs;
+        ifs.open(shaderSource, std::ifstream::in);
+        if (!ifs.is_open())
+        {
+            // TODO: LOG
+            std::cerr << "could not open shader file (" << shaderSource << ")" << std::endl;
+            DBG_HALT;
+        }
+        else
+        {
+            std::getline(ifs, text, (char)EOF);
+            ifs.close();
+        }
+        shaderSourceCode = text.c_str();
     }
-    shaderSourceCode = text.c_str();
-  }
 
-  // Compile the shader
-  gl::GLuint shader = gl::glCreateShader(shaderType);
-  gl::glShaderSource(shader, 1, &shaderSourceCode, NULL);
-  gl::glCompileShader(shader);
+    // Compile the shader
+    gl::GLuint shader = gl::glCreateShader(shaderType);
+    gl::glShaderSource(shader, 1, &shaderSourceCode, NULL);
+    gl::glCompileShader(shader);
 
-  // Check the compilation result
-  gl::GLint test;
-  gl::glGetShaderiv(shader, gl::GL_COMPILE_STATUS, &test);
-  if (!test)
-  {
-    // TODO: LOG
-    std::cerr << "Shader compilation failed with this message:" << std::endl;
-    std::vector<char> compilation_log(512);
-    gl::glGetShaderInfoLog(shader, compilation_log.size(), NULL, &compilation_log[0]);
-    std::cerr << &compilation_log[0] << std::endl;
-    glfwTerminate();
-    DBG_HALT;
-    exit(EXIT_FAILURE);
-  }
+    // Check the compilation result
+    gl::GLint test;
+    gl::glGetShaderiv(shader, gl::GL_COMPILE_STATUS, &test);
+    if (!test)
+    {
+        // TODO: LOG
+        std::cerr << "Shader compilation failed with this message:" << std::endl;
+        std::vector<char> compilation_log(512);
+        gl::glGetShaderInfoLog(shader, compilation_log.size(), NULL, &compilation_log[0]);
+        std::cerr << &compilation_log[0] << std::endl;
+        glfwTerminate();
+        DBG_HALT;
+        exit(EXIT_FAILURE);
+    }
 
-  return shader;
+    return shader;
 }
-gl::GLuint create_shader_program(const char *path_vert_shader, const char *path_frag_shader, bool inFile) {
-  // Load and compile the vertex and fragment shaders
-  gl::GLuint vertexShader = compile_shader(path_vert_shader, gl::GL_VERTEX_SHADER, inFile);
-  gl::GLuint fragmentShader = compile_shader(path_frag_shader, gl::GL_FRAGMENT_SHADER, inFile);
 
-  // Attach the above shader to a program
-  gl::GLuint shaderProgram = gl::glCreateProgram();
-  gl::glAttachShader(shaderProgram, vertexShader);
-  gl::glAttachShader(shaderProgram, fragmentShader);
+gl::GLuint create_shader_program(const char* path_vert_shader, const char* path_frag_shader, bool inFile)
+{
+    // Load and compile the vertex and fragment shaders
+    gl::GLuint vertexShader = compile_shader(path_vert_shader, gl::GL_VERTEX_SHADER, inFile);
+    gl::GLuint fragmentShader = compile_shader(path_frag_shader, gl::GL_FRAGMENT_SHADER, inFile);
 
-  // Flag the shaders for deletion
-  gl::glDeleteShader(vertexShader);
-  gl::glDeleteShader(fragmentShader);
+    // Attach the above shader to a program
+    gl::GLuint shaderProgram = gl::glCreateProgram();
+    gl::glAttachShader(shaderProgram, vertexShader);
+    gl::glAttachShader(shaderProgram, fragmentShader);
 
-  // Link and use the program
-  gl::glLinkProgram(shaderProgram);
-  gl::glUseProgram(shaderProgram);
+    // Flag the shaders for deletion
+    gl::glDeleteShader(vertexShader);
+    gl::glDeleteShader(fragmentShader);
 
-  return shaderProgram;
+    // Link and use the program
+    gl::glLinkProgram(shaderProgram);
+    gl::glUseProgram(shaderProgram);
+
+    return shaderProgram;
 }
