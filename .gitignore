@@ -43,3 +43,6 @@ out/
 *.code-workspace
 # VSCode extensions for debugging
 .vscode-test/
+
+# WSL files
+*:Zone.Identifier

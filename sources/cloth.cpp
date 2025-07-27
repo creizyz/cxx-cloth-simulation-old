@@ -309,8 +309,11 @@ void Cloth::render(const math::mat& projMatrix, bool renderTriangles, bool rende
 
             DBG_VALID_MAT(projMatrix);
 
-            gl::GLint matrixUniform = gl::glGetUniformLocation(program[0], "VPMatrix");
-            if (matrixUniform != -1) gl::glUniformMatrix4fv(matrixUniform, 1, gl::GL_FALSE, projMatrix.data);
+            gl::GLint matrixUniform = gl::glGetUniformLocation(program[1], "VPMatrix");
+            if (matrixUniform != -1)
+            {
+                gl::glUniformMatrix4fv(matrixUniform, 1, gl::GL_FALSE, projMatrix.data);
+            }
 
             for (size_t n = 0; n < nbrOfEdges; n++)
             {
