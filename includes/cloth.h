@@ -1,6 +1,7 @@
 #pragma once
 
-#include "openGL.h"
+#include "3D/openGL.h"
+#include "3D/shader.h"
 #include "maths/math.h"
 #include "physics/motion_system.h"
 
@@ -41,10 +42,12 @@ struct Cloth
 #endif
 
     // OPENGL VARIABLES
-    gl::GLuint program[2];
-    gl::GLuint VAO[2];
-    gl::GLuint VBO[2];
-    gl::GLuint IBO; // <- used by triangles only
+    static constexpr size_t UNIFORM_COLOR = 0;
+    static constexpr size_t STRAIN_COLOR  = 1;
+    std::array<std::shared_ptr<Program>, 2> program;
+    std::array<unsigned int, 2>             VAO;
+    std::array<unsigned int, 2>             VBO;
+    unsigned int                            IBO; // <- used by triangles only
 
     void allocateSpace(size_t size_h, size_t size_w);
     void setColor(float r, float g, float b, float a);
@@ -58,7 +61,7 @@ struct Cloth
     Cloth(LinearMotionSystem& lms, const math::vec3& pos, const math::vec3& axis_h, const math::vec3& axis_w, size_t size_h, size_t size_w, float step_h, float step_w);
     ~Cloth();
 
-    void initGL(gl::GLuint uniformColorProgram, gl::GLuint strainColorProgram);
+    void initGL(std::shared_ptr<Program> uniformColorProgram, std::shared_ptr<Program> strainColorProgram);
     void render(const math::mat& projMatrix, bool renderTriangles = true, bool renderEdges = true);
 
     void applyTriangleShapeMatching(size_t iTriangle);

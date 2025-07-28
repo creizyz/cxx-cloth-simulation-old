@@ -3,19 +3,17 @@
 #include "macro.h"
 
 Grid::Grid()
-    : program(0)
-    , VAO(0)
-    , VBO(0)
-    , IBO(0)
-    , drawCount(0)
-    , colorUniform(0)
-    , initialised(false)
-{
-    color[0] = 0.f;
-    color[1] = 0.f;
-    color[2] = 0.f;
-    color[3] = 0.f;
-}
+    : program{ nullptr }
+    , colorUniform{ -1 }
+    , matrixUniform{ -1 }
+    , positionAttribute{ -1 }
+    , color{ 0.f, 0.f, 0.f, 0.f }
+    , VAO{ 0 }
+    , VBO{ 0 }
+    , IBO{ 0 }
+    , drawCount{ 0 }
+    , initialised{ false }
+{ }
 
 Grid::~Grid()
 {
@@ -27,14 +25,18 @@ Grid::~Grid()
     }
 }
 
-void Grid::init(gl::GLuint shaderProgram, const math::vec3& gridPos, const math::vec3& axisA, const math::vec3& axisB,
+void Grid::init(std::shared_ptr<Program> shaderProgram, const math::vec3& gridPos, const math::vec3& axisA, const math::vec3& axisB,
                 float sizeSquare, size_t nbrOfSquare, float r, float g, float b, float a, bool bothDirection)
 {
     if (!initialised)
     {
         initialised = true;
-        program = shaderProgram;
-        colorUniform = gl::glGetUniformLocation(program, "color");
+
+        program = std::move(shaderProgram);
+        program->use();
+        colorUniform = program->get_location("color", gl::GL_UNIFORM);
+        matrixUniform = program->get_location("VPMatrix", gl::GL_UNIFORM);
+        positionAttribute = program->get_location("position", gl::GL_PROGRAM_INPUT);
 
         color[0] = r;
         color[1] = g;
@@ -122,9 +124,8 @@ void Grid::init(gl::GLuint shaderProgram, const math::vec3& gridPos, const math:
         gl::glBindBuffer(gl::GL_ARRAY_BUFFER, VBO);
         gl::glBufferData(gl::GL_ARRAY_BUFFER, 3 * drawCount * sizeof(gl::GLfloat), points, gl::GL_STATIC_DRAW);
 
-        gl::GLint position_attribute = gl::glGetAttribLocation(program, "position");
-        gl::glVertexAttribPointer(position_attribute, 3, gl::GL_FLOAT, gl::GL_FALSE, 0, 0);
-        gl::glEnableVertexAttribArray(position_attribute);
+        gl::glVertexAttribPointer(positionAttribute, 3, gl::GL_FLOAT, gl::GL_FALSE, 0, 0);
+        gl::glEnableVertexAttribArray(positionAttribute);
         gl::glBindVertexArray(0);
 
         delete[](points);
@@ -136,9 +137,8 @@ void Grid::render(const math::mat& projMatrix)
     DBG_ASSERT(initialised);
     if (initialised)
     {
-        gl::glUseProgram(program);
+        program->use();
 
-        gl::GLint matrixUniform = gl::glGetUniformLocation(program, "VPMatrix");
         if (matrixUniform != -1) gl::glUniformMatrix4fv(matrixUniform, 1, gl::GL_FALSE, projMatrix.data);
         if (colorUniform != -1) gl::glUniform4f(colorUniform, color[0], color[1], color[2], color[3]);
 

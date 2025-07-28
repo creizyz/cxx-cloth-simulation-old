@@ -1,4 +1,4 @@
-#include "openGL.h"
+#include "../../includes/3D/openGL.h"
 #include "macro.h"
 #include <iostream>
 #include <fstream>
@@ -97,76 +97,4 @@ void afterOpenglCallback(const glbinding::FunctionCall& call)
         std::cout << "<> error: " << std::hex << (int)error << std::endl;
         DBG_HALT;
     }
-}
-
-gl::GLuint compile_shader(const char* shaderSource, gl::GLenum shaderType, bool inFile)
-{
-    const char* shaderSourceCode(nullptr);
-    std::string text;
-
-    if (!inFile)
-    {
-        shaderSourceCode = shaderSource;
-    }
-    else
-    {
-        std::ifstream ifs;
-        ifs.open(shaderSource, std::ifstream::in);
-        if (!ifs.is_open())
-        {
-            // TODO: LOG
-            std::cerr << "could not open shader file (" << shaderSource << ")" << std::endl;
-            DBG_HALT;
-        }
-        else
-        {
-            std::getline(ifs, text, (char)EOF);
-            ifs.close();
-        }
-        shaderSourceCode = text.c_str();
-    }
-
-    // Compile the shader
-    gl::GLuint shader = gl::glCreateShader(shaderType);
-    gl::glShaderSource(shader, 1, &shaderSourceCode, NULL);
-    gl::glCompileShader(shader);
-
-    // Check the compilation result
-    gl::GLint test;
-    gl::glGetShaderiv(shader, gl::GL_COMPILE_STATUS, &test);
-    if (!test)
-    {
-        // TODO: LOG
-        std::cerr << "Shader compilation failed with this message:" << std::endl;
-        std::vector<char> compilation_log(512);
-        gl::glGetShaderInfoLog(shader, compilation_log.size(), NULL, &compilation_log[0]);
-        std::cerr << &compilation_log[0] << std::endl;
-        glfwTerminate();
-        DBG_HALT;
-        exit(EXIT_FAILURE);
-    }
-
-    return shader;
-}
-
-gl::GLuint create_shader_program(const char* path_vert_shader, const char* path_frag_shader, bool inFile)
-{
-    // Load and compile the vertex and fragment shaders
-    gl::GLuint vertexShader = compile_shader(path_vert_shader, gl::GL_VERTEX_SHADER, inFile);
-    gl::GLuint fragmentShader = compile_shader(path_frag_shader, gl::GL_FRAGMENT_SHADER, inFile);
-
-    // Attach the above shader to a program
-    gl::GLuint shaderProgram = gl::glCreateProgram();
-    gl::glAttachShader(shaderProgram, vertexShader);
-    gl::glAttachShader(shaderProgram, fragmentShader);
-
-    // Flag the shaders for deletion
-    gl::glDeleteShader(vertexShader);
-    gl::glDeleteShader(fragmentShader);
-
-    // Link and use the program
-    gl::glLinkProgram(shaderProgram);
-    gl::glUseProgram(shaderProgram);
-
-    return shaderProgram;
 }

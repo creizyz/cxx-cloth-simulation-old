@@ -74,7 +74,7 @@ struct ClothCollisionModel
 
     gl::GLuint VAO = 0;
     gl::GLuint VBO = 0;
-    gl::GLuint program;
+    std::shared_ptr<Program> program;
     std::vector<gl::GLfloat> toDraw;
 
     int nbrOfCollisions = 0;
@@ -84,7 +84,7 @@ struct ClothCollisionModel
 
     void setStiffess(float _stiffness);
     void init(Cloth& c);
-    void initGL(gl::GLuint _program);
+    void initGL(std::shared_ptr<Program> shaderProgram);
     void render(const math::mat& projMatrix);
     void updateAllTriangleData();
     void updateTriangleData(size_t i, bool updateAABB = true, bool updateParents = true);

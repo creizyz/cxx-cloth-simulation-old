@@ -332,19 +332,19 @@ void ClothCollisionModel::init(Cloth& c)
     int n = 0;
 }
 
-void ClothCollisionModel::initGL(gl::GLuint _program)
+void ClothCollisionModel::initGL(std::shared_ptr<Program> shaderProgram)
 {
     toDraw.clear();
-    program = _program;
+    program = std::move(shaderProgram);
     gl::glGenVertexArrays(1, &VAO);
     gl::glGenBuffers(1, &VBO);
 
     gl::glBindVertexArray(VAO);
     gl::glBindBuffer(gl::GL_ARRAY_BUFFER, VBO);
 
-    gl::GLint position_attribute2 = gl::glGetAttribLocation(program, "position");
-    gl::glVertexAttribPointer(position_attribute2, 3, gl::GL_FLOAT, gl::GL_FALSE, 0, 0);
-    gl::glEnableVertexAttribArray(position_attribute2);
+    auto positionAttribute = program->get_location("position", gl::GL_PROGRAM_INPUT);
+    gl::glVertexAttribPointer(positionAttribute, 3, gl::GL_FLOAT, gl::GL_FALSE, 0, 0);
+    gl::glEnableVertexAttribArray(positionAttribute);
     gl::glBindVertexArray(0);
 }
 
@@ -352,12 +352,19 @@ void ClothCollisionModel::render(const math::mat& projMatrix)
 {
     if (toDraw.size() > 6)
     {
-        gl::glUseProgram(program);
+        program->use();
 
-        gl::GLint matrixUniform = gl::glGetUniformLocation(program, "VPMatrix");
-        if (matrixUniform != -1) gl::glUniformMatrix4fv(matrixUniform, 1, gl::GL_FALSE, projMatrix.data);
-        gl::GLint colorUniform = gl::glGetUniformLocation(program, "color");
-        if (colorUniform != -1) gl::glUniform4f(colorUniform, 1.f, .5f, 0.f, 1.f);
+        auto matrixUniform = program->get_location("VPMatrix", gl::GL_UNIFORM);
+        if (matrixUniform != -1)
+        {
+            gl::glUniformMatrix4fv(matrixUniform, 1, gl::GL_FALSE, projMatrix.data);
+        }
+
+        auto colorUniform = program->get_location("color", gl::GL_UNIFORM);
+        if (colorUniform != -1)
+        {
+            gl::glUniform4f(colorUniform, 1.f, .5f, 0.f, 1.f);
+        }
 
         gl::glBindVertexArray(VAO);
         gl::glBindBuffer(gl::GL_ARRAY_BUFFER, VBO);

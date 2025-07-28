@@ -1,7 +1,7 @@
 #include "cloth.h"
 
 #include "macro.h"
-#include "openGL.h"
+#include "3D/openGL.h"
 #include "maths/math.h"
 #include "physics/constants.h"
 #include "physics/motion_system.h"
@@ -213,8 +213,8 @@ Cloth::~Cloth()
 {
     if (initialised)
     {
-        gl::glDeleteVertexArrays(2, VAO);
-        gl::glDeleteBuffers(2, VBO);
+        gl::glDeleteVertexArrays(2, VAO.data());
+        gl::glDeleteBuffers(2, VBO.data());
         gl::glDeleteBuffers(1, &IBO);
     }
     for (size_t i = 0; i < nbrOfPoints; i++) _lms.free_linear_data(posCur[i]);
@@ -232,41 +232,42 @@ Cloth::~Cloth()
 #endif
 }
 
-void Cloth::initGL(gl::GLuint uniformColorProgram, gl::GLuint strainColorProgram)
+void Cloth::initGL(std::shared_ptr<Program> uniformColorProgram, std::shared_ptr<Program> strainColorProgram)
 {
     if (!initialised)
     {
         initialised = true;
-        program[0] = uniformColorProgram;
-        program[1] = strainColorProgram;
+        program[UNIFORM_COLOR] = std::move(uniformColorProgram);
+        program[STRAIN_COLOR] = std::move(strainColorProgram);
 
-        gl::glGenVertexArrays(2, VAO);
-        gl::glGenBuffers(2, VBO);
+        gl::glGenVertexArrays(2, VAO.data());
+        gl::glGenBuffers(2, VBO.data());
         gl::glGenBuffers(1, &IBO);
 
         // TRIANGLES
-        gl::glBindVertexArray(VAO[0]);
-        gl::glBindBuffer(gl::GL_ARRAY_BUFFER, VBO[0]);
+        gl::glBindVertexArray(VAO[UNIFORM_COLOR]);
+        gl::glBindBuffer(gl::GL_ARRAY_BUFFER, VBO[UNIFORM_COLOR]);
         gl::glBufferData(gl::GL_ARRAY_BUFFER, 3 * nbrOfPoints * sizeof(gl::GLfloat), posInit, gl::GL_DYNAMIC_DRAW);
 
         gl::glBindBuffer(gl::GL_ELEMENT_ARRAY_BUFFER, IBO);
         gl::glBufferData(gl::GL_ELEMENT_ARRAY_BUFFER, 3 * nbrOfTriangles * sizeof(gl::GLuint), triangles, gl::GL_STATIC_DRAW);
 
-        gl::GLint position_attribute = gl::glGetAttribLocation(program[0], "position");
-        gl::glVertexAttribPointer(position_attribute, 3, gl::GL_FLOAT, gl::GL_FALSE, 0, 0);
-        gl::glEnableVertexAttribArray(position_attribute);
+        auto positionAttribute = program[UNIFORM_COLOR]->get_location("position", gl::GL_PROGRAM_INPUT);
+        gl::glVertexAttribPointer(positionAttribute, 3, gl::GL_FLOAT, gl::GL_FALSE, 0, 0);
+        gl::glEnableVertexAttribArray(positionAttribute);
         // EDGES
-        gl::glBindVertexArray(VAO[1]);
-        gl::glBindBuffer(gl::GL_ARRAY_BUFFER, VBO[1]);
+        gl::glBindVertexArray(VAO[STRAIN_COLOR]);
+        gl::glBindBuffer(gl::GL_ARRAY_BUFFER, VBO[STRAIN_COLOR]);
         gl::glBufferData(gl::GL_ARRAY_BUFFER, 8 * nbrOfEdges * sizeof(gl::GLfloat), vertex_e, gl::GL_DYNAMIC_DRAW);
 
-        gl::GLint position_attribute2 = gl::glGetAttribLocation(program[1], "position");
+        auto positionAttribute2 = program[STRAIN_COLOR]->get_location("position", gl::GL_PROGRAM_INPUT);
         //gl::glVertexAttribPointer(position_attribute2, 3, gl::GL_FLOAT, gl::GL_FALSE, 0, 0);
-        gl::glVertexAttribPointer(position_attribute2, 3, gl::GL_FLOAT, gl::GL_FALSE, 4 * sizeof(gl::GLfloat), 0);
-        gl::glEnableVertexAttribArray(position_attribute2);
-        gl::GLint strain_attribute = gl::glGetAttribLocation(program[1], "strain");
-        if (strain_attribute != -1) gl::glVertexAttribPointer(strain_attribute, 1, gl::GL_FLOAT, gl::GL_FALSE, 4 * sizeof(gl::GLfloat), (void*)(3 * sizeof(gl::GLfloat)));
-        if (strain_attribute != -1) gl::glEnableVertexAttribArray(strain_attribute);
+        gl::glVertexAttribPointer(positionAttribute2, 3, gl::GL_FLOAT, gl::GL_FALSE, 4 * sizeof(gl::GLfloat), 0);
+        gl::glEnableVertexAttribArray(positionAttribute2);
+
+        auto strainAttribute = program[STRAIN_COLOR]->get_location("strain", gl::GL_PROGRAM_INPUT);
+        if (strainAttribute != -1) gl::glVertexAttribPointer(strainAttribute, 1, gl::GL_FLOAT, gl::GL_FALSE, 4 * sizeof(gl::GLfloat), (void*)(3 * sizeof(gl::GLfloat)));
+        if (strainAttribute != -1) gl::glEnableVertexAttribArray(strainAttribute);
         gl::glBindVertexArray(0);
     }
 }
@@ -275,11 +276,11 @@ void Cloth::render(const math::mat& projMatrix, bool renderTriangles, bool rende
 {
     if (renderTriangles)
     {
-        gl::glUseProgram(program[0]);
+        program[UNIFORM_COLOR]->use();
 
-        gl::GLint matrixUniform = gl::glGetUniformLocation(program[0], "VPMatrix");
+        auto matrixUniform = program[UNIFORM_COLOR]->get_location("VPMatrix", gl::GL_UNIFORM);
         if (matrixUniform != -1) gl::glUniformMatrix4fv(matrixUniform, 1, gl::GL_FALSE, projMatrix.data);
-        gl::GLint colorUniform = gl::glGetUniformLocation(program[0], "color");
+        auto colorUniform = program[UNIFORM_COLOR]->get_location("color", gl::GL_UNIFORM);
         if (colorUniform != -1) gl::glUniform4f(colorUniform, color[0], color[1], color[2], color[3]);
 
         for (size_t n = 0; n < nbrOfPoints; n++)
@@ -291,8 +292,8 @@ void Cloth::render(const math::mat& projMatrix, bool renderTriangles, bool rende
             vertex_t[i + 2] = vec.z;
             //if (n == 0) DBG_HALT;
         }
-        gl::glBindVertexArray(VAO[0]);
-        gl::glBindBuffer(gl::GL_ARRAY_BUFFER, VBO[0]);
+        gl::glBindVertexArray(VAO[UNIFORM_COLOR]);
+        gl::glBindBuffer(gl::GL_ARRAY_BUFFER, VBO[UNIFORM_COLOR]);
         gl::glBindBuffer(gl::GL_ELEMENT_ARRAY_BUFFER, IBO);
         gl::glBufferSubData(gl::GL_ARRAY_BUFFER, NULL, 3 * nbrOfPoints * sizeof(gl::GLfloat), vertex_t);
         gl::glDrawElements(gl::GL_TRIANGLES, 3 * nbrOfTriangles, gl::GL_UNSIGNED_INT, 0);
@@ -305,11 +306,11 @@ void Cloth::render(const math::mat& projMatrix, bool renderTriangles, bool rende
     {
         if (renderEdges)
         {
-            gl::glUseProgram(program[1]);
+            program[STRAIN_COLOR]->use();
 
             DBG_VALID_MAT(projMatrix);
 
-            gl::GLint matrixUniform = gl::glGetUniformLocation(program[1], "VPMatrix");
+            gl::GLint matrixUniform = program[STRAIN_COLOR]->get_location("VPMatrix", gl::GL_UNIFORM);
             if (matrixUniform != -1)
             {
                 gl::glUniformMatrix4fv(matrixUniform, 1, gl::GL_FALSE, projMatrix.data);
@@ -343,8 +344,8 @@ void Cloth::render(const math::mat& projMatrix, bool renderTriangles, bool rende
                 vertex_e[i + 6] = pos[1].z;
                 vertex_e[i + 7] = strain;
             }
-            gl::glBindVertexArray(VAO[1]);
-            gl::glBindBuffer(gl::GL_ARRAY_BUFFER, VBO[1]);
+            gl::glBindVertexArray(VAO[STRAIN_COLOR]);
+            gl::glBindBuffer(gl::GL_ARRAY_BUFFER, VBO[STRAIN_COLOR]);
             gl::glBufferSubData(gl::GL_ARRAY_BUFFER, NULL, 8 * nbrOfEdges * sizeof(gl::GLfloat), vertex_e);
             gl::glDrawArrays(gl::GL_LINES, 0, 2 * nbrOfEdges);
             gl::glBindBuffer(gl::GL_ARRAY_BUFFER, 0);
@@ -558,8 +559,8 @@ void Cloth::update()
         _lms.add_force(posCur[n], math::vec3(0.f, -9.81f, 0.f));
     }
 
-    //size_t fixed[]{ 0, nbrOfPoints - 1, width - 1, nbrOfPoints - width, -1 };
-    const std::array<size_t, 2> fixed = {0, nbrOfPoints - 1};
+    // const std::array<size_t, 2> fixed = {0, nbrOfPoints - 1};
+    const std::array<size_t, 4> fixed = {0, width - 1, nbrOfPoints - 1};
     for (const auto& a : fixed)
     {
 #ifdef USE_IMPULSE_TO_FIX_POINTS

@@ -1,14 +1,16 @@
-#include "openGL.h"
+#include "3D/openGL.h"
+#include "3D/shader.h"
 #include "cloth.h"
 #include "BVH.h"
 
 #include "3D/grid.h"
 #include "3D/camera_controls.h"
+#include "3D/graphics.h"
+#include "tools/config.h"
+
+GraphicsSystem graphics;
 
 GLFWwindow* window;
-gl::GLuint uniformColorProgram;
-gl::GLuint vertexColorProgram;
-gl::GLuint strainColorProgram;
 
 Camera3D camera;
 CameraController camera_control(camera);
@@ -18,7 +20,7 @@ float update_time_correction = 0.f;
 
 Grid groundGrid;
 
-#define CLOTH_RESOLUTION 3
+#define CLOTH_RESOLUTION 5
 #define CLOTH_EDGE_SIZE .1f
 #define CLOTH_THICKNESS .05f
 
@@ -38,22 +40,33 @@ int nbrOfFrames(0);
 
 void init()
 {
-    glfwInitAndCreateWindow(window, 800, 600, "ClothSimulation");
+    auto config = Config::get_instance();
+    config->load("assets/config.ini");
+    auto width = config->get_int("graphics", "width", 400);
+    auto height = config->get_int("graphics", "height", 200);
+
+    glfwInitAndCreateWindow(window, width, height, "cxx-clothes");
     glBindingInit();
 
     gl::glEnable(gl::GL_DEPTH_TEST);
     gl::glEnable(gl::GL_BLEND);
     gl::glBlendFunc(gl::GL_SRC_ALPHA, gl::GL_ONE_MINUS_SRC_ALPHA);
 
-    uniformColorProgram = create_shader_program("../shader/uniformColor.vert", "../shader/basic.frag", true);
-    vertexColorProgram = create_shader_program("../shader/basic.vert", "../shader/basic.frag", true);
-    strainColorProgram = create_shader_program("../shader/strainColor.vert", "../shader/basic.frag", true);
+    if (!graphics.init())
+    {
+        std::cerr << "failed graphics system init. aborting" << std::endl;
+        DBG_HALT;
+        exit(EXIT_FAILURE);
+    }
 
     int w_width, w_height;
     glfwGetWindowSize(window, &w_width, &w_height);
     camera_control.init_camera(1.f, ((float)w_width / (float)w_height), 1.f, 1000.f);
     camera_control.init_speeds(2.f, 1.57f, 1.f);
     camera.translate(math::vec3(CLOTH_RESOLUTION * .5f * CLOTH_EDGE_SIZE, .8f, 2.f));
+
+    auto uniformColorProgram = graphics.get_shader_program("uniform_color");
+    auto strainColorProgram = graphics.get_shader_program("strain_color");
 
     groundGrid.init(uniformColorProgram, math::vec3(0.f, 0.f, 0.f), math::vec3(1.f, 0.f, 0.f),
                     math::vec3(0.f, 0.f, 1.f), 1.f, 50, .5f, .5f, 1.f, .1f, true);
@@ -149,6 +162,7 @@ void render()
 int main()
 {
     init();
+
     while (!glfwWindowShouldClose(window))
     {
         handleEvents();
@@ -156,8 +170,6 @@ int main()
         render();
         glfwPollEvents();
     }
-    gl::glDeleteProgram(uniformColorProgram);
-    gl::glDeleteProgram(vertexColorProgram);
-    gl::glDeleteProgram(strainColorProgram);
+
     return 0;
 }
