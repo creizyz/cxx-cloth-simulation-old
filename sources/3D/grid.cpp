@@ -132,14 +132,14 @@ void Grid::init(std::shared_ptr<Program> shaderProgram, const math::vec3& gridPo
     }
 }
 
-void Grid::render(const math::mat& projMatrix)
+void Grid::render(const math::mat& projectionMatrix) const
 {
     DBG_ASSERT(initialised);
     if (initialised)
     {
         program->use();
 
-        if (matrixUniform != -1) gl::glUniformMatrix4fv(matrixUniform, 1, gl::GL_FALSE, projMatrix.data);
+        if (matrixUniform != -1) gl::glUniformMatrix4fv(matrixUniform, 1, gl::GL_FALSE, projectionMatrix.data);
         if (colorUniform != -1) gl::glUniform4f(colorUniform, color[0], color[1], color[2], color[3]);
 
         gl::glBindVertexArray(VAO);

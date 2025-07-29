@@ -1,5 +1,6 @@
 #pragma once
 
+#include "3D/graphics.h"
 #include "3D/openGL.h"
 #include "3D/shader.h"
 #include "maths/math.h"
@@ -9,7 +10,7 @@
 #define USE_IMPULSE_TO_FIX_POINTS
 //#define UPDATE_ALL_AT_ONCE
 
-struct Cloth
+struct Cloth final : public Object3D
 {
     LinearMotionSystem& _lms;
     bool initialised;
@@ -57,12 +58,12 @@ struct Cloth
     void setThickness(float _thickness);
     void updateNbrTriangleAndEdgePerPoint();
 
-    Cloth(LinearMotionSystem& lms);
+    explicit Cloth(LinearMotionSystem& lms);
     Cloth(LinearMotionSystem& lms, const math::vec3& pos, const math::vec3& axis_h, const math::vec3& axis_w, size_t size_h, size_t size_w, float step_h, float step_w);
-    ~Cloth();
+    ~Cloth() override;
 
     void initGL(std::shared_ptr<Program> uniformColorProgram, std::shared_ptr<Program> strainColorProgram);
-    void render(const math::mat& projMatrix, bool renderTriangles = true, bool renderEdges = true);
+    void render(const math::mat& projMatrix) const override;
 
     void applyTriangleShapeMatching(size_t iTriangle);
     void triangle2DCorrection(size_t iTriangle);

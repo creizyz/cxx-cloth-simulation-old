@@ -63,7 +63,7 @@ struct AABB
     void updateParents();
 };
 
-struct ClothCollisionModel
+struct ClothCollisionModel final : public Object3D
 {
     std::vector<CollisionData_Triangle> triangles;
     std::vector<AABB*> triangleBoxes;
@@ -79,13 +79,13 @@ struct ClothCollisionModel
 
     int nbrOfCollisions = 0;
 
-    ClothCollisionModel(LinearMotionSystem& lms);
-    ~ClothCollisionModel();
+    explicit ClothCollisionModel(LinearMotionSystem& lms);
+    ~ClothCollisionModel() override;
 
     void setStiffess(float _stiffness);
     void init(Cloth& c);
     void initGL(std::shared_ptr<Program> shaderProgram);
-    void render(const math::mat& projMatrix);
+    void render(const math::mat & projMatrix) const override;
     void updateAllTriangleData();
     void updateTriangleData(size_t i, bool updateAABB = true, bool updateParents = true);
     void resolveInternalCollisions();

@@ -24,7 +24,7 @@ typedef enum
 class CameraController
 {
 public:
-    CameraController(Camera3D& c);
+    explicit CameraController(Camera3D & c);
 
     void init_speeds(float Ts, float Rs, float Zs);
     void init_camera(float fov, float aspect, float near, float far);

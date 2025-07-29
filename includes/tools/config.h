@@ -11,13 +11,13 @@ private:
     static std::mutex mutex;
 public:
     static Config* get_instance();
+    Config(const Config&) = delete;
+    Config& operator=(const Config&) = delete;
 
 private:
     std::map<std::string, std::map<std::string, std::string>> data;
 
     Config() = default;
-    Config(const Config&) = delete;
-    Config& operator=(const Config&) = delete;
 
 public:
     bool load(const std::string & filePath);

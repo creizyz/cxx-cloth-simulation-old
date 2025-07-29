@@ -1,16 +1,17 @@
 #pragma once
 
+#include "graphics.h"
 #include "openGL.h"
 #include "shader.h"
 #include "maths/math.h"
 
-struct Grid
+struct Grid final : Object3D
 {
     Grid();
-    ~Grid();
+    ~Grid() override;
 
     void init(std::shared_ptr<Program> shaderProgram, const math::vec3& gridPos, const math::vec3& axisA, const math::vec3& axisB, float sizeSquare, size_t nbrOfSquare, float r, float g, float b, float a, bool bothDirection = true);
-    void render(const math::mat& projMatrix);
+    void render(const math::mat& projectionMatrix) const override;
 
 
     std::shared_ptr<Program> program;

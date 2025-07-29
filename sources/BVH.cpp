@@ -348,7 +348,7 @@ void ClothCollisionModel::initGL(std::shared_ptr<Program> shaderProgram)
     gl::glBindVertexArray(0);
 }
 
-void ClothCollisionModel::render(const math::mat& projMatrix)
+void ClothCollisionModel::render(const math::mat& projMatrix) const
 {
     if (toDraw.size() > 6)
     {

@@ -272,8 +272,11 @@ void Cloth::initGL(std::shared_ptr<Program> uniformColorProgram, std::shared_ptr
     }
 }
 
-void Cloth::render(const math::mat& projMatrix, bool renderTriangles, bool renderEdges)
+void Cloth::render(const math::mat& projMatrix) const
 {
+    bool renderTriangles{ true };
+    bool renderEdges{ true };
+
     if (renderTriangles)
     {
         program[UNIFORM_COLOR]->use();
