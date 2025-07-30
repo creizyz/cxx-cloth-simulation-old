@@ -9,3 +9,8 @@ The "course-submission-shape-matching.pdf" file was the paper submission of this
 The project dependencies are:
 - GLFW3 (https://www.glfw.org)
 - glbinding-3.1 (https://github.com/cginternals/glbinding)
+
+On Ubuntu, install these using:
+```bash
+sudo apt-get install libglfw3-dev libglbinding-dev
+```
