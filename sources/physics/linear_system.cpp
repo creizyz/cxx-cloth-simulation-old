@@ -5,43 +5,15 @@
 #include <cstring>
 #include <exception>
 
-LinearMotionSystem::LinearMotionSystem(size_t size_linear_data_pool)
-    : linearData_maxNbr(0)
-    , linearData_pool(nullptr)
-    , linearData_used(nullptr)
-    , linearData_skip(nullptr)
-{
-    try
-    {
-        linearData_maxNbr = size_linear_data_pool;
-        linearData_pool = new LinearData[linearData_maxNbr];
-        linearData_used = new bool[linearData_maxNbr];
-        memset(linearData_used, 0, linearData_maxNbr * sizeof(bool));
-        linearData_firstUnused = 0;
-        linearData_skip = new bool[linearData_maxNbr];
-        memset(linearData_skip, 0, linearData_maxNbr * sizeof(bool));
-    }
-    catch (const std::exception&)
-    {
-        SAFE_DELETE_TAB(linearData_pool);
-        SAFE_DELETE_TAB(linearData_used);
-        SAFE_DELETE_TAB(linearData_skip);
+LinearMotionSystem::LinearMotionSystem(size_t size)
+    : size{ size }
+    , firstAvailable{ 0u }
+    , linearDataPool{ std::make_unique<LinearData[]>(size) }
+    , linearDataUsed{ std::make_unique<bool[]>(size) }
+    , linearDataSkip{ std::make_unique<bool[]>(size) }
+{ }
 
-        linearData_maxNbr = 0;
-        linearData_pool = nullptr;
-        linearData_used = nullptr;
-        linearData_skip = nullptr;
-    }
-}
-
-LinearMotionSystem::~LinearMotionSystem()
-{
-    SAFE_DELETE_TAB(linearData_pool);
-    SAFE_DELETE_TAB(linearData_used);
-    SAFE_DELETE_TAB(linearData_skip);
-}
-
-size_t LinearMotionSystem::new_linear_data(const math::vec3& position, const math::vec3& velocity, float mass)
+size_t LinearMotionSystem::new_linear_data(const math::vec3& position, const math::vec3& velocity, const float mass)
 {
     DBG_VALID_VEC(position);
     DBG_VALID_VEC(velocity);
@@ -50,15 +22,15 @@ size_t LinearMotionSystem::new_linear_data(const math::vec3& position, const mat
 
     if (mass != 0)
     {
-        for (size_t n = linearData_firstUnused; n < linearData_maxNbr; n++)
+        for (size_t n = this->firstAvailable; n < this->size; n++)
         {
-            if (!linearData_used[n])
+            if (!linearDataUsed[n])
             {
-                linearData_firstUnused = n + 1;
-                linearData_used[n] = true;
-                linearData_pool[n].p = position;
-                linearData_pool[n].v = velocity;
-                linearData_pool[n].im = 1 / mass;
+                this->firstAvailable = n + 1;
+                linearDataUsed[n] = true;
+                linearDataPool[n].p = position;
+                linearDataPool[n].v = velocity;
+                linearDataPool[n].im = 1 / mass;
                 return n;
             }
         }
@@ -68,132 +40,135 @@ size_t LinearMotionSystem::new_linear_data(const math::vec3& position, const mat
 
 void LinearMotionSystem::free_linear_data(size_t i)
 {
-    DBG_ASSERT(i < linearData_maxNbr);
-    DBG_ASSERT(linearData_used[i]);
+    DBG_ASSERT(i < this->size);
+    DBG_ASSERT(linearDataUsed[i]);
 
-    if (i < linearData_maxNbr)
+    if (i < this->size)
     {
-        linearData_used[i] = false;
-        linearData_skip[i] = false;
-        if (i < linearData_firstUnused) linearData_firstUnused = i;
+        linearDataUsed[i] = false;
+        linearDataSkip[i] = false;
+        if (i < this->firstAvailable)
+        {
+            this->firstAvailable = i;
+        }
     }
 }
 
 void LinearMotionSystem::stop_linear_update(size_t i)
 {
-    DBG_ASSERT(i < linearData_maxNbr);
+    DBG_ASSERT(i < this->size);
 
-    if (i < linearData_maxNbr && linearData_used[i])
+    if (i < this->size && linearDataUsed[i])
     {
-        linearData_skip[i] = true;
+        linearDataSkip[i] = true;
     }
 }
 
 void LinearMotionSystem::resume_linear_update(size_t i)
 {
-    DBG_ASSERT(i < linearData_maxNbr);
+    DBG_ASSERT(i < this->size);
 
-    if (i < linearData_maxNbr)
+    if (i < this->size)
     {
-        linearData_skip[i] = false;
+        linearDataSkip[i] = false;
     }
 }
 
 math::vec3 LinearMotionSystem::get_linear_position(size_t i)
 {
-    DBG_ASSERT(i < linearData_maxNbr);
+    DBG_ASSERT(i < this->size);
 
-    if (i < linearData_maxNbr && linearData_used[i])
+    if (i < this->size && linearDataUsed[i])
     {
-        return linearData_pool[i].p;
+        return linearDataPool[i].p;
     }
-    return math::vec3();
+    return {};
 }
 
 math::vec3 LinearMotionSystem::get_linear_velocity(size_t i)
 {
-    DBG_ASSERT(i < linearData_maxNbr);
+    DBG_ASSERT(i < this->size);
 
-    if (i < linearData_maxNbr && linearData_used[i])
+    if (i < this->size && linearDataUsed[i])
     {
-        return linearData_pool[i].v;
+        return linearDataPool[i].v;
     }
-    return math::vec3();
+    return {};
 }
 
 void LinearMotionSystem::move_linear_position(size_t i, const math::vec3& offset)
 {
     DBG_VALID_VEC(offset);
 
-    DBG_ASSERT(i < linearData_maxNbr);
-    DBG_ASSERT(linearData_used[i]);
+    DBG_ASSERT(i < this->size);
+    DBG_ASSERT(linearDataUsed[i]);
 
-    if (i < linearData_maxNbr)
+    if (i < this->size)
     {
-        linearData_pool[i].p += offset;
-        linearData_pool[i].v += offset / PHYSICS_TIME_STEP;
+        linearDataPool[i].p += offset;
+        linearDataPool[i].v += offset / PHYSICS_TIME_STEP;
     }
 }
 
 void LinearMotionSystem::add_force(size_t i, const math::vec3& force)
 {
     DBG_VALID_VEC(force);
-    DBG_ASSERT(i < linearData_maxNbr);
+    DBG_ASSERT(i < this->size);
 
-    if (i < linearData_maxNbr)
+    if (i < this->size)
     {
-        linearData_pool[i].f += force;
+        linearDataPool[i].f += force;
     }
 }
 
 void LinearMotionSystem::add_velocity(size_t i, const math::vec3& velocity)
 {
     DBG_VALID_VEC(velocity);
-    DBG_ASSERT(i < linearData_maxNbr);
+    DBG_ASSERT(i < this->size);
 
-    if (i < linearData_maxNbr)
+    if (i < this->size)
     {
-        linearData_pool[i].v += velocity;
+        linearDataPool[i].v += velocity;
     }
 }
 
 void LinearMotionSystem::apply_impulse(size_t i, const math::vec3& impulse)
 {
     DBG_VALID_VEC(impulse);
-    DBG_ASSERT(i < linearData_maxNbr);
+    DBG_ASSERT(i < this->size);
 
-    if (i < linearData_maxNbr)
+    if (i < this->size)
     {
-        linearData_pool[i].v += impulse * linearData_pool[i].im;
+        linearDataPool[i].v += impulse * linearDataPool[i].im;
     }
 }
 
 void LinearMotionSystem::set_mass(size_t i, float mass)
 {
     DBG_VALID_FLOAT(mass);
-    DBG_ASSERT(i < linearData_maxNbr);
+    DBG_ASSERT(i < this->size);
     DBG_ASSERT(mass != 0.f);
 
-    if (i < linearData_maxNbr && mass != 0.f)
+    if (i < this->size && mass != 0.f)
     {
-        linearData_pool[i].im = 1.f / mass;
+        linearDataPool[i].im = 1.f / mass;
     }
 }
 
 void LinearMotionSystem::update_data()
 {
-    for (size_t n = 0; n < linearData_maxNbr; n++)
+    for (size_t n = 0; n < this->size; n++)
     {
-        if (linearData_used[n] && !linearData_skip[n])
+        if (linearDataUsed[n] && !linearDataSkip[n])
         {
-            linearData_pool[n].v = linearData_pool[n].v * PHYSICS_DAMPING_FACTOR + linearData_pool[n].f * linearData_pool[n].im * PHYSICS_TIME_STEP;
-            linearData_pool[n].p += linearData_pool[n].v * PHYSICS_TIME_STEP;
-            linearData_pool[n].f = math::vec3();
+            linearDataPool[n].v = linearDataPool[n].v * PHYSICS_DAMPING_FACTOR + linearDataPool[n].f * linearDataPool[n].im * PHYSICS_TIME_STEP;
+            linearDataPool[n].p += linearDataPool[n].v * PHYSICS_TIME_STEP;
+            linearDataPool[n].f = math::vec3();
         }
     }
 }
 
-bool LinearMotionSystem::wrong_init()
+bool LinearMotionSystem::wrong_init() const
 {
-    return linearData_maxNbr == 0;
+    return this->size == 0;
 }

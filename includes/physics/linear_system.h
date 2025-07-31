@@ -1,6 +1,8 @@
 #pragma once
 
 #include <cstddef>
+#include <memory>
+
 #include "maths/math.h"
 
 typedef struct
@@ -15,8 +17,7 @@ typedef struct
 class LinearMotionSystem
 {
 public:
-    LinearMotionSystem(size_t size_linear_data_pool);
-    ~LinearMotionSystem();
+    explicit LinearMotionSystem(size_t size);
 
     size_t new_linear_data(const math::vec3& position, const math::vec3& velocity, float mass);
     void free_linear_data(size_t i);
@@ -30,12 +31,13 @@ public:
     void apply_impulse(size_t i, const math::vec3& impulse);
     void set_mass(size_t i, float mass);
     void update_data();
-    bool wrong_init();
+
+    [[nodiscard]] bool wrong_init() const;
 
 private:
-    size_t linearData_maxNbr;
-    LinearData* linearData_pool;
-    bool* linearData_used;
-    size_t linearData_firstUnused;
-    bool* linearData_skip;
+    size_t                        size;
+    size_t                        firstAvailable;
+    std::unique_ptr<LinearData[]> linearDataPool;
+    std::unique_ptr<bool[]>       linearDataUsed;
+    std::unique_ptr<bool[]>       linearDataSkip;
 };

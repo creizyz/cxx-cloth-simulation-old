@@ -116,8 +116,8 @@ int main()
         auto avgClothUpdateTime = nbrOfFrames > 0
                                       ? timerClothUpdate / static_cast<double>(nbrOfFrames)
                                       : 0.0;
-        std::cout << avgClothUpdateTime << " over " << nbrOfFrames << " (min: " << minTm << " - max: "
-            << maxTm << " )" << std::endl;
+        // std::cout << avgClothUpdateTime << " over " << nbrOfFrames << " (min: " << minTm << " - max: "
+        //     << maxTm << " )" << std::endl;
 
         last_update = beginning_current_update;
 
